@@ -2,12 +2,7 @@ package main
 
 import (
 	bc "blockchain/block"
-	"bufio"
-	"bytes"
-	"encoding/gob"
-	"fmt"
-	"log"
-	"net"
+	nn "blockchain/network"
 )
 
 var nodes = []string{"127.0.0.1:9001", "127.0.0.1:9002", "127.0.0.1:9003"}
@@ -30,128 +25,28 @@ func main() {
 
 	for i, node := range nodes {
 
-		// Khởi động server P2P của mỗi node
-		go startServer(node, &chain, i)
+		nodeChain := CopyBlockchain(&chain)
+
+    go nn.StartServer(node, nodeChain, i)
 	}
-	// transaction := bc.Transaction{Data: []byte("node 0 create transaction")}
-	// broadcastTransaction(nodes[0], transaction)
 
 	select {}
 
 }
 
-func startServer(address string, chain *bc.BlockChain, nodeID int) {
-	listener, err := net.Listen("tcp", address)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer listener.Close()
+func CopyBlockchain(source *bc.BlockChain) *bc.BlockChain {
+	newChain := bc.BlockChain{}
 
-	fmt.Printf("Node %d started. Listening on %s\n", nodeID, address)
-
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			log.Println(err)
-			continue
+	for _, block := range source.Blocks {
+		newBlock := bc.Block{
+			Timestamp:     block.Timestamp,
+			Transactions:  block.Transactions[:], 
+			PrevBlockHash: block.PrevBlockHash,
+			Hash:          block.Hash,
 		}
 
-		// Xử lý kết nối đến từ client
-		go handleClient(conn, chain, nodeID)
-	}
-}
-
-// func handleClient(conn net.Conn) {
-// 	var buf bytes.Buffer
-// 	_, err := buf.ReadFrom(conn)
-// 	if err != nil {
-// 		log.Println(err)
-// 		return
-// 	}
-
-// 	// Xử lý thông điệp từ client
-// 	var receivedTransaction bc.Transaction
-// 	decoder := gob.NewDecoder(&buf)
-// 	err = decoder.Decode(&receivedTransaction)
-// 	if err != nil {
-// 		log.Println(err)
-// 		return
-// 	}
-
-// 	fmt.Printf("Received transaction: %s\n", string(receivedTransaction.Data))
-// }
-
-func handleClient(conn net.Conn, chain *bc.BlockChain, nodeID int) {
-	fmt.Printf("Client connected: %s\n", conn.RemoteAddr().String())
-
-	// Sử dụng bufio.Scanner để đọc từ kết nối
-	scanner := bufio.NewScanner(conn)
-	for scanner.Scan() {
-		receivedMsg := scanner.Text()
-		fmt.Printf("Received message from client: %s\n", receivedMsg)
-
-		if receivedMsg == "printchain" {
-			// Gửi thông tin blockchain cho client
-			for _, block := range chain.Blocks {
-				blockInfo := fmt.Sprintf("Timestamp: %d\nPrev. hash: %x\n", block.Timestamp, block.PrevBlockHash)
-				for _, transaction := range block.Transactions {
-					blockInfo += fmt.Sprintf("Transaction: %s\n", string(transaction.Data))
-				}
-				blockInfo += fmt.Sprintf("Hash: %x\n", block.Hash)
-
-				_, err := fmt.Fprintf(conn, "%s\n", blockInfo)
-				if err != nil {
-					log.Println(err)
-					return
-				}
-			}
-		}
-
-		if receivedMsg == "hello" {
-			responseMsg := "Hello from node!"
-			_, err := fmt.Fprintf(conn, "%s\n", responseMsg)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-		}
+		newChain.Blocks = append(newChain.Blocks, &newBlock)
 	}
 
-	if err := scanner.Err(); err != nil {
-		log.Println(err)
-	}
-
-}
-
-func broadcastTransaction(nodeAddress string, transaction bc.Transaction) {
-	for _, node := range nodes {
-		if node != nodeAddress {
-			go sendTransaction(node, transaction)
-		}
-	}
-}
-
-func sendTransaction(nodeAddress string, transaction bc.Transaction) {
-	conn, err := net.Dial("tcp", nodeAddress)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	defer conn.Close()
-
-	var buf bytes.Buffer
-	encoder := gob.NewEncoder(&buf)
-	err = encoder.Encode(transaction)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	_, err = conn.Write(buf.Bytes())
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	fmt.Printf("Transaction sent to %s\n", nodeAddress)
+	return &newChain
 }
