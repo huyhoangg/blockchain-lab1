@@ -42,6 +42,7 @@ func CopyBlockchain(source *bc.BlockChain) *bc.BlockChain {
 			Timestamp:     block.Timestamp,
 			Transactions:  block.Transactions[:], 
 			PrevBlockHash: block.PrevBlockHash,
+			MerkleRoot:  block.MerkleRoot,
 			Hash:          block.Hash,
 		}
 
