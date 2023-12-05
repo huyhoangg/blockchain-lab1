@@ -66,7 +66,6 @@ func main() {
 		input = strings.TrimSpace(input)
 
 		switch input {
-		// ... (các lựa chọn khác của CLI)
 
 		case "hello":
 			helloMess := Message{Source: "client", Content: "hello"}
@@ -118,6 +117,30 @@ func main() {
 	
 			fmt.Println("Received message from client:", receivedMessage.Content)
 			
+		case "verify":
+			fmt.Println("Enter 'verify <block index> <transaction data>':")
+			fmt.Print("> ")
+			input, _ := reader.ReadString('\n')
+			input = strings.TrimSpace(input)
+
+			verifyMessage := Message{Source: "client", Content: input}
+
+			err := SendStructMessage(conn, verifyMessage)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			receivedVerifyResult, err := ReceiveStructMessage(conn)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+
+			fmt.Println("Verification result:", receivedVerifyResult.Content)
+
+		case "exit":
+			fmt.Println("Exiting...")
+			return
 		}
 	}
 }
@@ -138,7 +161,7 @@ func SendStructMessage(conn net.Conn, message Message) error {
 
 func ReceiveStructMessage(conn net.Conn) (Message, error) {
 	var receivedMessage Message
-	buf := make([]byte, 4096) // Kích thước buffer, bạn có thể điều chỉnh tùy theo kích thước dữ liệu truyền
+	buf := make([]byte, 4096) 
 	n, err := conn.Read(buf)
 	if err != nil {
 		return receivedMessage, err
@@ -150,16 +173,3 @@ func ReceiveStructMessage(conn net.Conn) (Message, error) {
 	}
 	return receivedMessage, nil
 }
-
-
-// // Function to generate a random transaction
-// func CreateRandomTransaction() *bc.Transaction {
-// 	// Generate a random index to select a word from the list
-	
-
-// 	// Create a transaction with random data
-// 	fmt.Println(randomData)
-// 	return &bc.Transaction{
-// 		Data: []byte(randomData),
-// 	}
-// }

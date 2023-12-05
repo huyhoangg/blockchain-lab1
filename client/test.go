@@ -2,93 +2,96 @@ package main
 
 import (
 	"crypto/sha256"
-	"bytes"
 	"fmt"
+	"time"
 )
 
-type Block struct {
-	Timestamp int64
-	Transactions []*Transaction
-	PrevBlockHash []byte
-	Hash []byte
-	MerkleRoot []byte
-}
-
+// Transaction represents a transaction in the block
 type Transaction struct {
 	Data []byte
 }
 
-type BlockChain struct {
+// Block represents a block in the blockchain
+type Block struct {
+	Timestamp     int64
+	Transactions  []*Transaction
+	PrevBlockHash []byte
+	Hash          []byte
+	MerkleRoot    []byte
+}
+
+// Blockchain represents the chain of blocks
+type Blockchain struct {
 	Blocks []*Block
 }
 
-
+// BuildMerkleRoot calculates the Merkle Root from a list of transactions
 func BuildMerkleRoot(transactions []*Transaction) []byte {
 	var hashes [][]byte
 
-	// Chuyển đổi dữ liệu giao dịch thành slice của byte và tính toán hash cho mỗi giao dịch
 	for _, tx := range transactions {
-			hash := sha256.Sum256(tx.Data)
-			hashes = append(hashes, hash[:])
+		hash := sha256.Sum256(tx.Data)
+		hashes = append(hashes, hash[:])
 	}
 
-	// Xây dựng Merkle Tree từ danh sách các hash
 	for len(hashes) > 1 {
-			if len(hashes)%2 != 0 {
-					hashes = append(hashes, hashes[len(hashes)-1])
+		var newHashes [][]byte
+		for i := 0; i < len(hashes); i += 2 {
+			var combined []byte
+			if i+1 < len(hashes) {
+				combined = append(hashes[i], hashes[i+1]...)
+			} else {
+				// Duplicate the last hash to create a pair
+				combined = append(hashes[i], hashes[i]...)
 			}
-			var newHashes [][]byte
-			for i := 0; i < len(hashes); i += 2 {
-					combined := append(hashes[i], hashes[i+1]...)
-					hash := sha256.Sum256(combined)
-					newHashes = append(newHashes, hash[:])
-			}
-			hashes = newHashes
+			hash := sha256.Sum256(combined)
+			newHashes = append(newHashes, hash[:])
+		}
+		hashes = newHashes
 	}
 
 	return hashes[0]
 }
 
-func VerifyTransactionInBlock(block *Block, transactionData []byte) bool {
-	// Kiểm tra nếu Merkle Root trong block khớp với Merkle Root được tạo từ danh sách giao dịch
-	calculatedMerkleRoot := BuildMerkleRoot(block.Transactions)
-	if !bytes.Equal(calculatedMerkleRoot, block.MerkleRoot) {
-			return false
+func main1() {
+	// Sample transactions
+	transactions := []*Transaction{
+		{Data: []byte("Transaction 1")},
+		{Data: []byte("Transaction 2")},
+		{Data: []byte("Transaction 3")},
 	}
 
-	// Tìm kiếm giao dịch trong danh sách các giao dịch của block
-	for _, tx := range block.Transactions {
-			if bytes.Equal(tx.Data, transactionData) {
-					return true // Giao dịch được tìm thấy trong block
-			}
+	// Create a new block
+	newBlock := &Block{
+		Timestamp:     time.Now().Unix(),
+		Transactions:  transactions,
+		PrevBlockHash: []byte("PreviousBlockHash"),
 	}
 
-	return false // Giao dịch không tồn tại trong block
+	// Calculate Merkle Root for the block's transactions
+	newBlock.MerkleRoot = BuildMerkleRoot(transactions)
+
+	// Print Merkle Root as hex
+
+	// Add the block to the blockchain
+	blockchain := &Blockchain{
+		Blocks: []*Block{newBlock},
+	}
+
+	PrintBlockchain(blockchain)
 }
 
+func PrintBlockchain(chain *Blockchain) {
+	// In ra thông tin của blockchain
+	for _, block := range chain.Blocks {
+		fmt.Printf("Timestamp: %d\n", block.Timestamp)
+		fmt.Printf("Prev. hash: %x\n", block.PrevBlockHash)
 
-// Hàm main để minh họa việc xác minh giao dịch trong block
-func main1() {
-	// Khởi tạo block với các thông tin cần thiết
-	block := &Block{
-			Timestamp:     1638736738, // Thời gian
-			Transactions:  []*Transaction{
-				{Data: []byte("Transaction 1")},
-				{Data: []byte("Transaction 2")},
-					// Thêm các hash của giao dịch khác nếu cần
-			},
-			PrevBlockHash: []byte("PreviousHash"), // Hash của block trước
-			Hash:          []byte("BlockHash"),    // Hash của block hiện tại
-			MerkleRoot:    nil,                   // Merkle Root sẽ được tính sau
-	}
-	// Tính toán và gán Merkle Root cho block
-	block.MerkleRoot = BuildMerkleRoot(block.Transactions)
-
-	// Gọi hàm VerifyTransactionInBlock để xác minh giao dịch trong block
-	transactionToVerify := []byte("Transaction 1")
-	if VerifyTransactionInBlock(block, transactionToVerify) {
-			fmt.Println("Giao dịch tồn tại trong block")
-	} else {
-			fmt.Println("Giao dịch không tồn tại trong block")
+		fmt.Println("Transactions:")
+		for _, transaction := range block.Transactions {
+			fmt.Printf("- %s\n", string(transaction.Data))
+		}
+		fmt.Printf("MerkleRoot: %x\n", block.MerkleRoot)
+		fmt.Printf("hash: %x\n", block.Hash)
 	}
 }
