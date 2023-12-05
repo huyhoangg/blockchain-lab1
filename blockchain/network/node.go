@@ -116,16 +116,17 @@ func HandleClient(conn net.Conn, chain *bc.BlockChain, nodeID int) {
 				// 	Source:       "node",
 				// 	Transactions: transactions,
 				// }
-				for _, node := range nodes[1:] {
-					connn, errr := net.Dial("tcp", node)
-					if errr != nil {
-						log.Fatal(errr)
-					}
-					defer conn.Close()
+				// for _, node := range nodes[1:] {
+				// 	connn, errr := net.Dial("tcp", node)
+				// 	if errr != nil {
+				// 		log.Fatal(errr)
+				// 	}
+				// 	defer conn.Close()
 
-					err = SendStructMessage(connn, message)
-				}
+				// 	err = SendStructMessage(connn, message)
+				// }
 			} 
+			
 			// switch {
 			// case strings.HasPrefix(receivedMessage.Content, "tx:"):
 			// 	fmt.Println("Received transaction broadcast from another node:", receivedMessage.Content[3:])
