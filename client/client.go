@@ -2,14 +2,14 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"os"
 	"strings"
-	"encoding/gob"
-	"bytes"
-	"math/rand"
 	"time"
 )
 
@@ -57,7 +57,7 @@ func main() {
 
 	fmt.Println("Connected to node:", selectedNode)
 
-	fmt.Println("Blockchain Client CLI - Commands: create, printchain, hello, exit")
+	fmt.Println("Blockchain Client CLI - Commands: hello, create, printchain, verify, exit")
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
