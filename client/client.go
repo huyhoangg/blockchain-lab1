@@ -32,18 +32,18 @@ func main() {
 	r := bufio.NewReader(os.Stdin)
 
 	for {
-		fmt.Print("Select a node by entering its number ( to ", len(nodes), "): ")
+		fmt.Print("Select a node by entering its number (0 to ", len(nodes)-1, "): ")
 		input, _ := r.ReadString('\n')
 		input = strings.TrimSpace(input)
 
 		nodeIndex := 0
 		_, err := fmt.Sscanf(input, "%d", &nodeIndex)
-		if err != nil || nodeIndex < 1 || nodeIndex > len(nodes) {
+		if err != nil || nodeIndex < 0 || nodeIndex >= len(nodes) {
 			fmt.Println("Invalid input. Please enter a valid node number.")
 			continue
 		}
 
-		selectedNode = nodes[nodeIndex-1]
+		selectedNode = nodes[nodeIndex]
 		break
 	}
 
