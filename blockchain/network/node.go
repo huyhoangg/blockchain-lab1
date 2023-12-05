@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"strings"
+	"time"
 )
 type Message struct {
 	Content string
@@ -18,7 +19,10 @@ type Message struct {
 
 
 var nodes = []string{"127.0.0.1:9001", "127.0.0.1:9002", "127.0.0.1:9003"}
-var transactions []*bc.Transaction
+
+var transactions0 []*bc.Transaction
+var transactions1 []*bc.Transaction
+var transactions2 []*bc.Transaction
 
 
 func StartServer(address string, chain *bc.BlockChain, nodeID int) {
@@ -82,12 +86,12 @@ func HandleClient(conn net.Conn, chain *bc.BlockChain, nodeID int) {
 				fmt.Println("Node", nodeID , "Received transaction from client:", receivedMessage.Content[3:])
 				transaction := &bc.Transaction{Data: []byte(receivedMessage.Content[3:])}
 
-				transactions = append(transactions, transaction)
+				transactions0 = append(transactions0, transaction)
 				
-				if len(transactions) == 3 {
+				if len(transactions0) == 3 {
 					message := Message{
 						Source:       "node",
-						Transactions: transactions,
+						Transactions: transactions0,
 					}
 					for _, node := range nodes[1:] {
 						connn, errr := net.Dial("tcp", node)
@@ -104,6 +108,22 @@ func HandleClient(conn net.Conn, chain *bc.BlockChain, nodeID int) {
 				fmt.Println("Unknown content from client")
 			}
 		case "node":
+			if (receivedMessage.Content == "createblock") {
+				fmt.Println("create block")
+				if (nodeID == 1) {
+					fmt.Println("\nNode", nodeID, "is updating new block ...")
+					chain.AddBlock(transactions1)
+					fmt.Println("\nNode", nodeID, "is synced with newest chain ...")
+					
+				}
+				if (nodeID == 0) {
+					fmt.Println("\nNode", nodeID, "is updating new block ...")
+					chain.AddBlock(transactions0)
+					fmt.Println("\nNode", nodeID, "is synced with newest chain ...")
+				}
+				break
+			}
+
 			for _, tx := range receivedMessage.Transactions {
 				fmt.Println("Node",nodeID,"received transaction broadcast from another node:", string(tx.Data))
 			}
@@ -111,22 +131,32 @@ func HandleClient(conn net.Conn, chain *bc.BlockChain, nodeID int) {
 				fmt.Println("\nNode", nodeID, "is responsibled for creating block for these transactions ...")
 				chain.AddBlock(receivedMessage.Transactions)
 				fmt.Println("\nNode", nodeID, "new block added to chain ...")
-				
-				// message := Message{
-				// 	Source:       "node",
-				// 	Transactions: transactions,
-				// }
-				// for _, node := range nodes[1:] {
-				// 	connn, errr := net.Dial("tcp", node)
-				// 	if errr != nil {
-				// 		log.Fatal(errr)
-				// 	}
-				// 	defer conn.Close()
 
-				// 	err = SendStructMessage(connn, message)
-				// }
+				fmt.Println("Sync chain to other nodes ...")
+
+				message := Message{
+					Source:       "node",
+					Content: "createblock",
+				}
+				for _, node := range nodes[:2] {
+					connn, errr := net.Dial("tcp", node)
+					if errr != nil {
+						log.Fatal(errr)
+					}
+					defer conn.Close()
+
+					err = SendStructMessage(connn, message)
+					time.Sleep(8 * time.Millisecond)
+				}
+				
 			} 
-			
+
+			if (nodeID == 1) {
+				for _, tx := range receivedMessage.Transactions {
+					transactions1 = append(transactions1, tx)
+				}
+			}
+
 			// switch {
 			// case strings.HasPrefix(receivedMessage.Content, "tx:"):
 			// 	fmt.Println("Received transaction broadcast from another node:", receivedMessage.Content[3:])
